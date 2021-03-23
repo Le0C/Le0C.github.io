@@ -14,4 +14,10 @@ body > * {
   grid-column: 1 / -1; }
 
 hr {
-  width: 100%; }
+  width: 100%;
+  border: unset; }
+
+canvas {
+  width: 100%;
+  background-color: violet;
+  height: 64px; }
