@@ -5,7 +5,6 @@
     <title>index</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="./home.css">
-    <link rel="shortcut icon" href="/favicon.ico">
     <style>html { visibility: visible; }</style>
   </head>
   <body>
@@ -17,26 +16,231 @@
     <p>This site was built using a custom static site generator I built in 2020 using the unified ecosystem. I did this as an exercise to learn more about site generation, and because I found the unified ecosystem fascinating, both in concept and to work with. The result was <a href="https://github.com/techtestleo/remark-site">remark-site</a>.</p>
     <p>In 2021 I forked and repurposed the repo to become the <a href="https://github.com/Le0C/remark-site">static site builder</a> for my gh-pages site. I also wanted to explore the excellent <a href="https://www.joshwcomeau.com/tutorials/">css tutorials by Josh Comeau</a> and implement them on my own website (thanks Josh!).</p>
     <hr>
-    
-  <script>/*
-
-Canvas animations
-
-*/
+    <script type="module">/* Loaded after body */
 
 let dividers = document.getElementsByTagName('hr');
+const scale = 3;
+const height = 64;
+const width = dividers.item(0).clientWidth;
+const radius = 8;
+const halfRadius = radius/2;
+const scaledH = height * scale;
+const scaledW = width * scale;
+let points = [];
+const point_limit = 12;
+const connectRange = 200;
+const lineWidth = 4;
+const margin = 110;
+const turnFactor = 0.3;
+let colourVariable = "#bada55"
+
+const hex2rgba = (hex) => {
+    const [r, g, b] = hex.match(/\w\w/g).map(x => parseInt(x, 16));
+    return [r, g, b];
+  };
+
+function componentToHex(c) {
+    var hex = c.toString(16);
+    return hex.length == 1 ? "0" + hex : hex;
+  }
+
+function rgbToHex(r, g, b) {
+    return "#" + componentToHex(r) + componentToHex(g) + componentToHex(b);
+  }
+
+function randomIntFromInterval(min, max) { // min and max included 
+    return Math.random() * (max - min + 1) + min;
+  }
+
+function create () {
 
 if (dividers) {
 
     for (let i = 0; i <= dividers.length-1; i++) {
         let divide = dividers.item(i);
         
-        divide.appendChild(createElement());
+        divide.appendChild(createElement(i));
+    }
+}
+}
+
+function createElement (i) {
+    let canvasEl = document.createElement('canvas');
+    canvasEl.width = width;
+    canvasEl.height = height;
+    switch (i) {
+        case 0:
+            return createAboutMe(canvasEl);
+        case 1:
+            return createAboutSite(canvasEl);
     }
 }
 
-function createElement () {
-    let x = document.createElement('canvas');
-    return x;
-}</script></body>
+function createAboutMe (canvasEl) {
+    canvasEl.id = 'me';
+    return canvasEl;
+};
+function createAboutSite (canvasEl) {
+    canvasEl.id = 'site';
+    return canvasEl;
+};
+
+
+
+function initPoints () {
+    for (let i = 0; i < point_limit; i++) {
+        points[points.length] = {
+            x: randomIntFromInterval(radius*2, (scaledW-radius*2)),
+            y: randomIntFromInterval(radius*2, (scaledH-radius*2)),
+            dx:randomIntFromInterval(-0.5, 0.76),
+            dy:randomIntFromInterval(-0.5, 0.76),
+            history: []
+        }
+    }
+}
+
+function movePoint (point) {
+    point.x += point.dx;
+    point.y += point.dy;
+}
+
+function keepWithinBounds(point) {
+  
+    if (point.x < margin) {
+      point.dx += turnFactor;
+    }
+    if (point.x > scaledW - margin) {
+      point.dx -= turnFactor
+    }
+    if (point.y < margin) {
+      point.dy += turnFactor;
+    }
+    if (point.y > scaledH - margin) {
+      point.dy -= turnFactor;
+    }
+  }
+
+function distance (a, b) {
+    return Math.sqrt(
+        (a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y)
+    );
+}
+
+function animate () {
+
+    // update
+    for (let point of points) {
+        movePoint(point);
+        keepWithinBounds(point);
+    }
+    
+    const ctx = document.getElementById("me").getContext("2d");
+    ctx.clearRect(0, 0, scaledW, scaledH);
+    
+
+    // draw
+    for (let point of points) {
+        drawAmorphousMesh(ctx, point);
+    }
+
+    window.requestAnimationFrame(animate);
+}
+
+function modifyColor (point) {
+    let {x, y } = point;
+
+    if (point.x < 0) {
+        point.x = 0 - point.x;
+    }
+    if (point.y < 0) {
+        point.y = 0 - point.y;
+    }
+
+    let r_scaledY = Math.floor(255 * (y/scaledH));
+    let g_scaledX = Math.floor(255 * (x/scaledW));
+    let b_scaledXY = Math.floor(255 * (x/scaledW));
+
+    // Range check code
+    if (r_scaledY>255) {
+        r_scaledY = r_scaledY-255;
+    } else if (r_scaledY<0) {
+        r_scaledY = r_scaledY + 255
+    }
+
+    if (g_scaledX>255) {
+        g_scaledX = g_scaledX-255;
+    } else if (g_scaledX<0) {
+        g_scaledX = g_scaledX + 255
+    }
+
+    if (b_scaledXY>255) {
+        b_scaledXY = b_scaledXY - 255;
+    } else if (b_scaledXY<0) {
+        b_scaledXY = b_scaledXY + 255
+    }
+
+    colourVariable = rgbToHex(r_scaledY, g_scaledX, b_scaledXY);
+    return colourVariable;
+}
+
+/**
+ * 
+ * @param {CanvasRenderingContext2D} ctx 
+ * @param {*} point 
+ */
+function drawAmorphousMesh (ctx, point) {
+    ctx.fillStyle = modifyColor(point);
+    ctx.moveTo(point.x, point.y);
+    ctx.beginPath();
+    ctx.arc(point.x, point.y, radius, 0, 2 * Math.PI);
+    ctx.fill();
+    ctx.closePath();
+    connectPoint(ctx, point);
+}
+/**
+ * 
+ * @param {CanvasRenderingContext2D} ctx 
+ * @param {*} point 
+ */
+function connectPoint (ctx, point) {
+    for (let otherPoint of points) { 
+        if (distance(point, otherPoint) < connectRange) {
+            ctx.lineWidth = lineWidth;
+            let grad = ctx.createLinearGradient(point.x, point.y, otherPoint.x, otherPoint.y);
+            let shadeA = modifyColor(point);
+            let shadeB = modifyColor(otherPoint);
+            grad.addColorStop(0, shadeA);
+            grad.addColorStop(1, shadeB);
+
+            ctx.fillStyle = grad;
+            ctx.strokeStyle = grad;
+            
+            ctx.moveTo(point.x + halfRadius, point.y + halfRadius);
+            ctx.lineTo(otherPoint.x + halfRadius, otherPoint.y + halfRadius);
+            ctx.stroke();
+
+            otherPoint.dx *= turnFactor;
+            otherPoint.dy *= turnFactor;
+
+            point.dx /= turnFactor;
+            point.dy /= turnFactor;
+        }
+    }
+}
+
+
+create();
+
+window.onload = () => {
+    initPoints();
+    const canvasA = document.getElementById("me");
+    canvasA.width = scaledW;
+    canvasA.height = scaledH;
+    const canvasB = document.getElementById("site");
+    canvasB.width = scaledW;
+    canvasB.height = scaledH;
+    
+    window.requestAnimationFrame(animate);
+}</script>
+  </body>
 </html>
